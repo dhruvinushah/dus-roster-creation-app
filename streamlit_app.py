@@ -1,8 +1,9 @@
 # File Name team_roster_app.py
 # Description: A simple Streamlit app to create a team roster based on list of players and skill level inputted. 
-
 import streamlit as st
 import random
+import pandas as pd
+import io
 
 st.title("🏆 Team Roster Generator")
 st.write("Paste your list of player names and assign skill levels to generate balanced teams.")
@@ -65,14 +66,42 @@ def create_balanced_teams(player_list, team_min=10, team_max=12):
                         break
     return teams
 
+# Categories for team names
+categories = {
+    "Gemstones": ["Ruby", "Emerald", "Sapphire", "Amethyst", "Topaz", "Diamond", "Opal", "Pearl", "Garnet", "Aquamarine", "Jade", "Onyx", "Quartz", "Turquoise", "Zircon"],
+    "Planets": ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"],
+    "Elements": ["Hydrogen", "Helium", "Lithium", "Beryllium", "Boron", "Carbon", "Nitrogen", "Oxygen", "Fluorine", "Neon"]
+}
+
+selected_category_name, selected_names = random.choice(list(categories.items()))
+
 # Generate teams
 if st.button("Generate Teams"):
     if len(player_data) < 10:
         st.warning("You need at least 10 players to form a team.")
     else:
         teams = create_balanced_teams(player_data)
-        st.success(f"{len(teams)} teams generated!")
+        team_names = [selected_names[i % len(selected_names)] for i in range(len(teams))]
+        st.success(f"{len(teams)} teams generated using category: {selected_category_name}")
         for idx, team in enumerate(teams):
-            st.subheader(f"Team {idx + 1} ({len(team)} players)")
+            st.subheader(f"Team {idx + 1}: {team_names[idx]} ({len(team)} players)")
             for player, level in team:
                 st.write(f"- {player} ({level})")
+
+        # Prepare CSV export
+        csv_data = []
+        for idx, team in enumerate(teams):
+            team_name = team_names[idx]
+            for player, level in team:
+                csv_data.append({'Team Name': team_name, 'Player': player, 'Skill': level})
+        df = pd.DataFrame(csv_data)
+
+        csv_buffer = io.StringIO()
+        df.to_csv(csv_buffer, index=False)
+        csv_value = csv_buffer.getvalue()
+
+        st.download_button(label="📥 Download Teams as CSV",
+                           data=csv_value,
+                           file_name='teams.csv',
+                           mime='text/csv')
+
